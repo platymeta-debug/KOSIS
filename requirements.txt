@@ -1,11 +1,12 @@
+# Core
 requests==2.32.3
-pandas>=2.2
-numpy>=1.26
+pandas==2.3.1
+numpy==2.3.2
 PyYAML==6.0.2
 tqdm==4.66.4
-numpy==1.26.4
-duckdb==0.9.2
-scikit-learn==1.4.2
-statsmodels==0.14.2
-pyarrow==15.0.2
+duckdb==1.1.0
 
+# Modeling / Stats (Py 3.13 호환)
+scipy==1.14.1
+statsmodels==0.14.2
+scikit-learn==1.5.2
