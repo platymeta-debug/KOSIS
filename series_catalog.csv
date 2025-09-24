@@ -1,0 +1,4 @@
+logical_name,mode,prdSe,startPrdDe,endPrdDe,userStatsId,orgId,tblId,itmId,objL1,objL2,objL3,objL4,objL5,objL6,objL7,objL8,newEstPrdCnt,prdInterval,outputFields
+macro.cpi,param,M,199001,,,101,DT_CPI,1,,A01,,,,,,,,"PRD_DE,DT,UNIT_NM"
+macro.policy_rate,param,M,200001,,,201,DT_RATE,100,,,,,,,,,,,"PRD_DE,DT,UNIT_NM"
+asset.kospi,user,M,199501,,user_abcdef,,,,,,,,,,,,,"PRD_DE,DT,UNIT_NM"

@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from .config import KOSIS_API_KEY, URL_DATA, URL_LIST, URL_PARAM
+from .config import KOSIS_API_KEY, URL_DATA, URL_LIST, URL_META, URL_PARAM
 from .utils import get_json
 
 
-def list_stats(vw_cd: str, parent_list_id: str, jsonVD: str = "Y") -> Any:
+def list_stats(vw_cd: str, parent_list_id: str, jsonVD: str = "Y") -> List[Dict[str, Any]]:
     """Retrieve a statistics list for the provided view and parent list."""
 
     params = {
@@ -64,7 +64,7 @@ def data_by_params(
     newEstPrdCnt: Optional[int] = None,
     prdInterval: Optional[int] = None,
     outputFields: str = "PRD_DE,DT,UNIT_NM",
-) -> Any:
+) -> List[Dict[str, Any]]:
     """Retrieve statistics data for the parameterised table endpoint."""
 
     params: Dict[str, Any] = {
@@ -89,4 +89,22 @@ def data_by_params(
         params["prdInterval"] = prdInterval
     if outputFields:
         params["outputFields"] = outputFields
+    if not any(key for key in params if key.lower().startswith("objl")):
+        raise ValueError("Param API 호출 시 objL1~objL8 중 최소 1개가 필요합니다.")
+    if not itm_id:
+        raise ValueError("Param API 호출 시 itmId는 필수입니다.")
     return get_json(URL_PARAM, params)
+
+
+def get_meta_table(org_id: str, tbl_id: str) -> Dict[str, Any]:
+    """Fetch table metadata for the supplied organisation/table identifiers."""
+
+    params = {
+        "method": "getMeta",
+        "apiKey": KOSIS_API_KEY,
+        "format": "json",
+        "type": "TBL",
+        "orgId": org_id,
+        "tblId": tbl_id,
+    }
+    return get_json(URL_META, params)
