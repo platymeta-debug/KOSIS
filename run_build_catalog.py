@@ -7,6 +7,23 @@ from typing import Iterable, List
 from src.catalog_builder import build_catalog
 from src.kosis_api import list_stats
 
+
+def autoload_top_roots(vwcd: str, parent: str = "A", verbose: bool = False) -> list[str]:
+    """상위(parent) 단계의 listId/listCd를 수집해 roots로 반환."""
+
+    rows = list_stats(vwcd, parent, verbose=verbose)
+    roots: list[str] = []
+    for row in rows or []:
+        child = (
+            row.get("LIST_ID")
+            or row.get("listId")
+            or row.get("LIST_CD")
+            or row.get("listCd")
+        )
+        if child:
+            roots.append(child)
+    return roots
+
 # 기본 폴백 후보 (빠른 재시도)
 FALLBACKS = [
     ("MT_ZTITLE", ["A", "ROOT", "0"]),
@@ -100,14 +117,42 @@ def main():
     ap.add_argument("--vwcd", default="MT_ZTITLE", help="MT_ZTITLE=주제별, MT_OTITLE=기관별")
     ap.add_argument("--roots", nargs="+", required=True, help="parentListId 루트들")
     ap.add_argument("--out", default="series_catalog.csv")
-    ap.add_argument("--max-depth", type=int, default=6)
+    ap.add_argument("--max-depth", type=int, default=9)
     ap.add_argument("--auto-fallback", action="store_true", help="실패/빈 결과 시 내장 후보로 재시도")
     ap.add_argument("--auto-discover", action="store_true", help="내장 스캐너로 parentListId 자동 탐색")
     ap.add_argument("--discover-max-tries", type=int, default=500)
     ap.add_argument("--discover-time-budget", type=float, default=90.0)
     ap.add_argument("--verbose", action="store_true")
-    ap.add_argument("--leaf-cap", type=int, default=500)
+    ap.add_argument("--leaf-cap", type=int, default=5000)
+    ap.add_argument(
+        "--probe",
+        action="store_true",
+        help="리프 20개만 미리 탐색해 응답 구조/리프 판정 성공여부를 빠르게 점검하고 종료",
+    )
     args = ap.parse_args()
+
+    if args.roots and len(args.roots) == 1 and args.roots[0].upper() in ("AUTO", "TOP"):
+        top = autoload_top_roots(args.vwcd, parent="A", verbose=args.verbose)
+        if args.verbose:
+            preview = top[:12]
+            suffix = " ..." if len(top) > 12 else ""
+            print(f"[catalog] autoloaded roots (n={len(top)}): {preview}{suffix}")
+        args.roots = top if top else ["A"]
+
+    if args.probe:
+        df = build_catalog(
+            args.vwcd,
+            roots=args.roots,
+            max_depth=min(args.max_depth or 3, 3),
+            verbose=True,
+            leaf_cap=min(args.leaf_cap or 20, 20),
+        )
+        try:
+            print(df.head(5))
+        except Exception:
+            pass
+        print("[probe] done.")
+        sys.exit(0)
 
     # 0) 사용자 입력 우선 시도
     df = pd.DataFrame()
