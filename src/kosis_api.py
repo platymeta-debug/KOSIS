@@ -10,7 +10,7 @@ from .utils import get_json
 
 def list_stats(
     vw_cd: str,
-    parent_list_id: str,
+    parent_id: str,
     pindex: int = 1,
     psize: int = 1000,
 ) -> List[Dict[str, Any]]:
@@ -23,12 +23,14 @@ def list_stats(
     """
 
     params = {
-        "serviceKey": KOSIS_API_KEY,
-        "vwCd": vw_cd,
-        "parentListId": parent_list_id,
+        "method": "getList",
         "format": "json",
+        "apiKey": KOSIS_API_KEY,
+        "vwCd": vw_cd,
+        "parentId": parent_id,
         "pIndex": str(pindex),
         "pSize": str(psize),
+        "jsonVD": "Y",
     }
 
     rows = get_json(URL_LIST, params)

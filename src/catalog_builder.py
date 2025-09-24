@@ -20,14 +20,14 @@ def _is_leaf(node: Dict) -> bool:
 
 def _collect_from_root(
     vw_cd: str,
-    root_id: str,
+    parent_id: str,
     max_depth: int,
     depth: int = 0,
 ) -> List[Dict]:
     if depth > max_depth:
         return []
 
-    items = list_stats(vw_cd, root_id)
+    items = list_stats(vw_cd, parent_id)
     collected: List[Dict] = []
     for item in items:
         if _is_leaf(item):
@@ -54,9 +54,9 @@ def build_catalog(vw_cd: str, roots: List[str], max_depth: int = 6) -> pd.DataFr
     """Traverse the statistics list tree and collect candidate tables."""
 
     rows: List[Dict] = []
-    for root in roots:
+    for parent_id in roots:
         try:
-            rows.extend(_collect_from_root(vw_cd, root, max_depth))
+            rows.extend(_collect_from_root(vw_cd, parent_id, max_depth))
         except Exception:
             # Skip problematic roots but continue scanning the others.
             continue
