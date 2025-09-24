@@ -15,8 +15,8 @@ KOSIS_API_KEY = os.getenv("KOSIS_API_KEY", "")
 DB_PATH       = os.getenv("KOSIS_DB", "kosis.duckdb")
 
 # -------- 호출 설정 --------
-TIMEOUT     = 30
-MAX_RETRIES = 4
+TIMEOUT     = 20
+MAX_RETRIES = 3
 RATE_SLEEP  = 0.35  # 초/호출 (429 뜨면 0.6으로)
 
 # -------- KOSIS 엔드포인트 --------

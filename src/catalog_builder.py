@@ -10,58 +10,75 @@ from .kosis_api import list_stats
 
 
 def _is_leaf(node: Dict) -> bool:
-    """Return ``True`` if the node appears to represent a table entry."""
+    tbl = node.get("TBL_ID") or node.get("tblId") or node.get("tbl_id")
+    se = (node.get("LIST_SE") or node.get("listSe") or "").upper()
+    return bool(tbl) or se in {"TBL", "DT", "TB", "STAT", "TABLE"}
 
-    if node.get("tblId"):
-        return True
-    list_se = (node.get("listSe") or "").upper()
-    return list_se in {"TBL", "DT", "TB", "STAT", "TABLE"}
+
+def _norm(node: Dict) -> Dict:
+    return {
+        "listId": node.get("LIST_ID") or node.get("listId"),
+        "orgId": node.get("ORG_ID") or node.get("orgId"),
+        "tblId": node.get("TBL_ID") or node.get("tblId"),
+        "listSe": (node.get("LIST_SE") or node.get("listSe") or "").upper(),
+        "name": node.get("LIST_NM")
+        or node.get("listNm")
+        or node.get("TBL_NM")
+        or node.get("tblNm"),
+    }
 
 
 def _collect_from_root(
     vw_cd: str,
-    parent_id: str,
+    root_id: str,
     max_depth: int,
+    verbose: bool,
+    leaf_cap: int,
     depth: int = 0,
+    acc: List[Dict] | None = None,
 ) -> List[Dict]:
-    if depth > max_depth:
-        return []
-
-    items = list_stats(vw_cd, parent_id)
-    collected: List[Dict] = []
-    for item in items:
-        if _is_leaf(item):
-            collected.append(
-                {
-                    "vwCd": vw_cd,
-                    "listId": item.get("listId"),
-                    "orgId": item.get("orgId"),
-                    "tblId": item.get("tblId"),
-                    "listSe": item.get("listSe"),
-                    "name": item.get("name"),
-                }
-            )
+    if acc is None:
+        acc = []
+    if depth > max_depth or (leaf_cap and len(acc) >= leaf_cap):
+        return acc
+    rows = list_stats(vw_cd, root_id, verbose=verbose)
+    if verbose:
+        print(f"[tree] depth={depth} root={root_id} rows={len(rows)} acc={len(acc)}")
+    for row in rows:
+        if leaf_cap and len(acc) >= leaf_cap:
+            break
+        if _is_leaf(row):
+            acc.append(_norm(row))
         else:
-            child = item.get("listId")
+            child = row.get("LIST_ID") or row.get("listId")
             if child:
-                collected.extend(
-                    _collect_from_root(vw_cd, child, max_depth, depth + 1)
+                _collect_from_root(
+                    vw_cd,
+                    child,
+                    max_depth,
+                    verbose,
+                    leaf_cap,
+                    depth + 1,
+                    acc,
                 )
-    return collected
+    return acc
 
 
-def build_catalog(vw_cd: str, roots: List[str], max_depth: int = 6) -> pd.DataFrame:
-    """Traverse the statistics list tree and collect candidate tables."""
-
-    rows: List[Dict] = []
-    for parent_id in roots:
-        try:
-            rows.extend(_collect_from_root(vw_cd, parent_id, max_depth))
-        except Exception:
-            # Skip problematic roots but continue scanning the others.
-            continue
-
-    df = pd.DataFrame(rows).drop_duplicates()
-    if not df.empty:
-        df = df[df["tblId"].notna()]
+def build_catalog(
+    vw_cd: str,
+    roots: List[str],
+    max_depth: int = 6,
+    verbose: bool = False,
+    leaf_cap: int = 500,
+) -> pd.DataFrame:
+    acc: List[Dict] = []
+    for root in roots:
+        if verbose:
+            print(f"[tree] root={root} start")
+        _collect_from_root(vw_cd, root, max_depth, verbose, leaf_cap, 0, acc)
+        if leaf_cap and len(acc) >= leaf_cap:
+            break
+    df = pd.DataFrame(acc).dropna(subset=["tblId"]).drop_duplicates()
+    if verbose:
+        print(f"[tree] collected leaves={len(df)}")
     return df
