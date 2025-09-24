@@ -126,11 +126,18 @@ def main():
         if vw and roots:
             try:
                 df = try_build(vw, roots, args.max_depth)
-                if df is not None and not df.empty:
-                    args.vwcd, args.roots = vw, roots
-
             except Exception as e:
-                print(f"[discover] build failed with discovered root: {e}")
+                print(f"[discover] build failed: {e}")
+
+            if df is None or df.empty:
+                print("[discover] retry with deeper depth (max-depth+4)")
+                try:
+                    df = try_build(vw, roots, args.max_depth + 4)
+                except Exception as e:
+                    print(f"[discover] deep build failed: {e}")
+
+            if df is not None and not df.empty:
+                args.vwcd, args.roots = vw, roots
 
     # 3) 최종 판정
     if df is None or df.empty:
