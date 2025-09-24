@@ -9,10 +9,8 @@ from src.kosis_api import list_stats
 
 # 기본 폴백 후보 (빠른 재시도)
 FALLBACKS = [
-    ("MT_ZTITLE", ["ROOT", "A", "B", "0"]),
-    ("MT_GTITLE", ["ROOT", "A", "B", "0"]),
-    ("MT_ZTITLE", ["AA", "AB", "AC", "A1", "A2"]),
-    ("MT_GTITLE", ["AA", "AB", "AC", "A1", "A2"]),
+    ("MT_ZTITLE", ["A", "ROOT", "0"]),
+    ("MT_OTITLE", ["A", "ROOT", "0"]),
 ]
 
 def _chunks(it: Iterable[str], n: int) -> Iterable[List[str]]:
@@ -86,7 +84,7 @@ def try_build(vwcd: str, roots: list[str], max_depth: int) -> pd.DataFrame:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--vwcd", default="MT_ZTITLE", help="MT_ZTITLE=주제별, MT_GTITLE=기관별")
+    ap.add_argument("--vwcd", default="MT_ZTITLE", help="MT_ZTITLE=주제별, MT_OTITLE=기관별")
     ap.add_argument("--roots", nargs="+", required=True, help="parentListId 루트들")
     ap.add_argument("--out", default="series_catalog.csv")
     ap.add_argument("--max-depth", type=int, default=6)
@@ -118,7 +116,7 @@ def main():
     # 2) 그래도 실패면 auto-discover로 루트 탐색
     if (df is None or df.empty) and args.auto_discover:
         vw, roots = auto_discover_roots(
-            vwcds=["MT_ZTITLE","MT_GTITLE"],
+            vwcds=["MT_ZTITLE", "MT_OTITLE"],
             max_tries=args.discover_max_tries,
             time_budget=args.discover_time_budget,
             rate_sleep=0.35
