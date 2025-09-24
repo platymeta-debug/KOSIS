@@ -2,60 +2,66 @@
 
 from __future__ import annotations
 
-from collections import deque
-from typing import Any, Dict, List
+from typing import Dict, List
 
 import pandas as pd
 
 from .kosis_api import list_stats
 
 
-def _extract(row: Dict[str, Any], key: str) -> Any:
-    """Return a value using a handful of common key variants."""
+def _is_leaf(node: Dict) -> bool:
+    """Return ``True`` if the node appears to represent a table entry."""
 
-    return row.get(key) or row.get(key.upper()) or row.get(key.lower())
+    if node.get("tblId"):
+        return True
+    list_se = (node.get("listSe") or "").upper()
+    return list_se in {"TBL", "DT", "TB", "STAT", "TABLE"}
+
+
+def _collect_from_root(
+    vw_cd: str,
+    root_id: str,
+    max_depth: int,
+    depth: int = 0,
+) -> List[Dict]:
+    if depth > max_depth:
+        return []
+
+    items = list_stats(vw_cd, root_id)
+    collected: List[Dict] = []
+    for item in items:
+        if _is_leaf(item):
+            collected.append(
+                {
+                    "vwCd": vw_cd,
+                    "listId": item.get("listId"),
+                    "orgId": item.get("orgId"),
+                    "tblId": item.get("tblId"),
+                    "listSe": item.get("listSe"),
+                    "name": item.get("name"),
+                }
+            )
+        else:
+            child = item.get("listId")
+            if child:
+                collected.extend(
+                    _collect_from_root(vw_cd, child, max_depth, depth + 1)
+                )
+    return collected
 
 
 def build_catalog(vw_cd: str, roots: List[str], max_depth: int = 6) -> pd.DataFrame:
-    """Traverse the statistics list tree and collect nodes that expose tables."""
+    """Traverse the statistics list tree and collect candidate tables."""
 
-    rows: List[Dict[str, Any]] = []
+    rows: List[Dict] = []
     for root in roots:
-        queue: deque[tuple[str, int]] = deque([(root, 0)])
-        while queue:
-            parent, depth = queue.popleft()
-            if depth > max_depth:
-                continue
-            items = list_stats(vw_cd, parent)
-            for item in items:
-                item["depth"] = depth
-                rows.append(item)
-                next_id = (
-                    item.get("listId")
-                    or item.get("LIST_ID")
-                    or item.get("list_id")
-                )
-                if next_id:
-                    queue.append((str(next_id), depth + 1))
+        try:
+            rows.extend(_collect_from_root(vw_cd, root, max_depth))
+        except Exception:
+            # Skip problematic roots but continue scanning the others.
+            continue
 
-    df = pd.DataFrame(rows)
-
-    candidates: List[Dict[str, Any]] = []
-    for _, row in df.iterrows():
-        record = row.to_dict()
-        org = _extract(record, "orgId")
-        tbl = _extract(record, "tblId")
-        if org and tbl:
-            candidates.append(
-                {
-                    "listId": _extract(record, "listId") or _extract(record, "LIST_ID"),
-                    "listNm": _extract(record, "listNm") or _extract(record, "LIST_NM"),
-                    "orgId": org,
-                    "tblId": tbl,
-                    "upListId": _extract(record, "upListId")
-                    or _extract(record, "UP_LIST_ID"),
-                    "depth": record.get("depth"),
-                }
-            )
-
-    return pd.DataFrame(candidates).drop_duplicates()
+    df = pd.DataFrame(rows).drop_duplicates()
+    if not df.empty:
+        df = df[df["tblId"].notna()]
+    return df

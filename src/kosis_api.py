@@ -8,18 +8,69 @@ from .config import KOSIS_API_KEY, URL_DATA, URL_LIST, URL_META, URL_PARAM
 from .utils import get_json
 
 
-def list_stats(vw_cd: str, parent_list_id: str, jsonVD: str = "Y") -> List[Dict[str, Any]]:
-    """Retrieve a statistics list for the provided view and parent list."""
+def list_stats(
+    vw_cd: str,
+    parent_list_id: str,
+    pindex: int = 1,
+    psize: int = 1000,
+) -> List[Dict[str, Any]]:
+    """Retrieve a statistics list for the provided view and parent list.
+
+    The KOSIS "list" endpoint is a little inconsistent across environments so we
+    normalise the parameters and the response for downstream callers.  The API
+    occasionally returns objects instead of plain lists, and may provide field
+    names in several different casings.
+    """
 
     params = {
-        "method": "getList",
-        "apiKey": KOSIS_API_KEY,
-        "format": "json",
+        "serviceKey": KOSIS_API_KEY,
         "vwCd": vw_cd,
         "parentListId": parent_list_id,
-        "jsonVD": jsonVD,
+        "format": "json",
+        "pIndex": str(pindex),
+        "pSize": str(psize),
     }
-    return get_json(URL_LIST, params)
+
+    rows = get_json(URL_LIST, params)
+
+    # In some environments an empty result may come back as {"list": []} or
+    # even as an error dict.  Convert to a list of dicts for callers.
+    if isinstance(rows, dict) and "list" in rows:
+        rows = rows["list"]
+    if not isinstance(rows, list):
+        return []
+
+    normalised: List[Dict[str, Any]] = []
+    for raw in rows:
+        list_id = raw.get("listId") or raw.get("LIST_ID") or raw.get("list_id")
+        tbl_id = raw.get("tblId") or raw.get("TBL_ID") or raw.get("tbl_id")
+        org_id = raw.get("orgId") or raw.get("ORG_ID") or raw.get("org_id")
+        list_se = (
+            raw.get("listSe")
+            or raw.get("LIST_SE")
+            or raw.get("list_se")
+            or ""
+        )
+        name = (
+            raw.get("listNm")
+            or raw.get("LIST_NM")
+            or raw.get("list_nm")
+            or raw.get("tblNm")
+            or raw.get("TBL_NM")
+        )
+
+        normalised.append(
+            {
+                "listId": list_id,
+                "tblId": tbl_id,
+                "orgId": org_id,
+                "listSe": str(list_se).upper(),
+                "name": name,
+                "raw": raw,
+            }
+        )
+
+    return normalised
 
 
 def data_by_userstats(
