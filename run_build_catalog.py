@@ -75,9 +75,22 @@ def auto_discover_roots(vwcds: List[str], max_tries: int = 500, time_budget: flo
     print(f"[discover] no root found within tries={tried}, time={time.time()-t0:.1f}s")
     return "", []
 
-def try_build(vwcd: str, roots: list[str], max_depth: int) -> pd.DataFrame:
+def try_build(
+    vwcd: str,
+    roots: list[str],
+    max_depth: int,
+    *,
+    verbose: bool,
+    leaf_cap: int,
+) -> pd.DataFrame:
     print(f"[catalog] trying vwCd={vwcd}, roots={roots}")
-    df = build_catalog(vwcd, roots, max_depth=max_depth)
+    df = build_catalog(
+        vwcd,
+        roots,
+        max_depth=max_depth,
+        verbose=verbose,
+        leaf_cap=leaf_cap,
+    )
     n = 0 if df is None else len(df)
     print(f"[catalog] result: {n} candidates")
     return df if df is not None else pd.DataFrame()
@@ -92,12 +105,20 @@ def main():
     ap.add_argument("--auto-discover", action="store_true", help="내장 스캐너로 parentListId 자동 탐색")
     ap.add_argument("--discover-max-tries", type=int, default=500)
     ap.add_argument("--discover-time-budget", type=float, default=90.0)
+    ap.add_argument("--verbose", action="store_true")
+    ap.add_argument("--leaf-cap", type=int, default=500)
     args = ap.parse_args()
 
     # 0) 사용자 입력 우선 시도
     df = pd.DataFrame()
     try:
-        df = try_build(args.vwcd, args.roots, args.max_depth)
+        df = try_build(
+            args.vwcd,
+            args.roots,
+            args.max_depth,
+            verbose=args.verbose,
+            leaf_cap=args.leaf_cap,
+        )
     except Exception as e:
         print(f"[catalog] initial attempt failed: {e}")
 
@@ -105,7 +126,13 @@ def main():
     if (df is None or df.empty) and args.auto_fallback:
         for vw, roots in FALLBACKS:
             try:
-                df = try_build(vw, roots, args.max_depth)
+                df = try_build(
+                    vw,
+                    roots,
+                    args.max_depth,
+                    verbose=args.verbose,
+                    leaf_cap=args.leaf_cap,
+                )
                 if df is not None and not df.empty:
                     args.vwcd, args.roots = vw, roots
                     break
@@ -123,14 +150,26 @@ def main():
         )
         if vw and roots:
             try:
-                df = try_build(vw, roots, args.max_depth)
+                df = try_build(
+                    vw,
+                    roots,
+                    args.max_depth,
+                    verbose=args.verbose,
+                    leaf_cap=args.leaf_cap,
+                )
             except Exception as e:
                 print(f"[discover] build failed: {e}")
 
             if df is None or df.empty:
                 print("[discover] retry with deeper depth (max-depth+4)")
                 try:
-                    df = try_build(vw, roots, args.max_depth + 4)
+                    df = try_build(
+                        vw,
+                        roots,
+                        args.max_depth + 4,
+                        verbose=args.verbose,
+                        leaf_cap=args.leaf_cap,
+                    )
                 except Exception as e:
                     print(f"[discover] deep build failed: {e}")
 

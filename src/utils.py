@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import random
 import time
 from typing import Any
 
@@ -11,24 +10,35 @@ import requests
 from .config import MAX_RETRIES, RATE_SLEEP, TIMEOUT
 
 
-def get_json(url: str, params: dict[str, Any]) -> Any:
+def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
     """Perform a GET request with retry/backoff logic and KOSIS specific guards."""
 
-    backoff = 0.6
-    for attempt in range(MAX_RETRIES):
+    last_err: Exception | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        started = time.time()
         try:
-            time.sleep(RATE_SLEEP)
+            if verbose:
+                debug_keys = ("method", "vwCd", "parentId", "pIndex", "pSize")
+                debug_params = {k: params.get(k) for k in debug_keys}
+                print(
+                    f"[HTTP] GET {url} try={attempt} timeout={TIMEOUT} params={debug_params}"
+                )
             response = requests.get(url, params=params, timeout=TIMEOUT)
-            if response.status_code in (429, 500, 502, 503, 504):
-                raise requests.HTTPError(str(response.status_code))
+            if verbose:
+                elapsed = time.time() - started
+                print(f"[HTTP] status={response.status_code} elapsed={elapsed:.2f}s")
             response.raise_for_status()
             payload = response.json()
-            if isinstance(payload, dict) and (payload.get("errMsg") or payload.get("errorMsg")):
-                raise RuntimeError(str(payload))
-            if isinstance(payload, dict) and isinstance(payload.get("list"), list):
-                return payload["list"]
+
+            if isinstance(payload, dict) and payload.get("err"):
+                raise RuntimeError(payload)
+
+            time.sleep(RATE_SLEEP)
             return payload
-        except Exception:  # pragma: no cover - thin wrapper over network I/O
-            if attempt == MAX_RETRIES - 1:
-                raise
-            time.sleep(backoff * (1.6 ** attempt) + random.uniform(0, 0.3))
+        except Exception as exc:  # pragma: no cover - network/HTTP wrapper
+            last_err = exc
+            if verbose:
+                print(f"[HTTP] error on try={attempt}: {exc}")
+            time.sleep(min(1.0 * attempt, 3.0))
+
+    raise RuntimeError(str(last_err))

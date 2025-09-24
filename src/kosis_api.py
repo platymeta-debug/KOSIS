@@ -13,13 +13,14 @@ def list_stats(
     parent_id: str,
     pindex: int = 1,
     psize: int = 1000,
+    verbose: bool = False,
 ) -> List[Dict[str, Any]]:
     """Retrieve a statistics list for the provided view and parent list.
 
-    The KOSIS "list" endpoint is a little inconsistent across environments so we
-    normalise the parameters and the response for downstream callers.  The API
-    occasionally returns objects instead of plain lists, and may provide field
-    names in several different casings.
+    The helper enforces the official parameter names (``apiKey``, ``parentId``
+    etc.) and optionally emits verbose HTTP logging.  Some environments wrap the
+    payload in a top-level ``{"list": [...]}``, so we normalise the response to a
+    plain list for downstream callers.
     """
 
     params = {
@@ -33,46 +34,10 @@ def list_stats(
         "jsonVD": "Y",
     }
 
-    rows = get_json(URL_LIST, params)
-
-    # In some environments an empty result may come back as {"list": []} or
-    # even as an error dict.  Convert to a list of dicts for callers.
+    rows = get_json(URL_LIST, params, verbose=verbose)
     if isinstance(rows, dict) and "list" in rows:
         rows = rows["list"]
-    if not isinstance(rows, list):
-        return []
-
-    normalised: List[Dict[str, Any]] = []
-    for raw in rows:
-        list_id = raw.get("listId") or raw.get("LIST_ID") or raw.get("list_id")
-        tbl_id = raw.get("tblId") or raw.get("TBL_ID") or raw.get("tbl_id")
-        org_id = raw.get("orgId") or raw.get("ORG_ID") or raw.get("org_id")
-        list_se = (
-            raw.get("listSe")
-            or raw.get("LIST_SE")
-            or raw.get("list_se")
-            or ""
-        )
-        name = (
-            raw.get("listNm")
-            or raw.get("LIST_NM")
-            or raw.get("list_nm")
-            or raw.get("tblNm")
-            or raw.get("TBL_NM")
-        )
-
-        normalised.append(
-            {
-                "listId": list_id,
-                "tblId": tbl_id,
-                "orgId": org_id,
-                "listSe": str(list_se).upper(),
-                "name": name,
-                "raw": raw,
-            }
-        )
-
-    return normalised
+    return rows if isinstance(rows, list) else []
 
 
 def data_by_userstats(
