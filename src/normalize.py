@@ -8,12 +8,14 @@ def _detect_date(cols):
     return None
 
 def _detect_val(cols):
-    for k in ["DATA_VALUE","data_value","DT","value"]:
+    # KOSIS 표준은 DT
+    for k in ["DT","DATA_VALUE","data_value","value","DT_VAL"]:
         if k in cols: return k
     return None
 
 def _series_key(logical_name, row: dict):
-    dims = {k: row.get(k) for k in row.keys() if k not in ("PRD_DE","prdDe","time","period","DATA_VALUE","DT","value")}
+    drop = {"PRD_DE","prdDe","time","period","DATA_VALUE","DT","DT_VAL","data_value","value"}
+    dims = {k: row.get(k) for k in row.keys() if k not in drop}
     return logical_name + "|" + json.dumps(dims, ensure_ascii=False, sort_keys=True)
 
 def normalize_latest_snapshot():
@@ -45,7 +47,7 @@ def normalize_latest_snapshot():
                 "period_freq": row["prd_se"] or "Q",
                 "value": float(val),
                 "dims": json.dumps({k:r.get(k) for k in r.keys() if k not in (dcol, vcol)}, ensure_ascii=False),
-                "unit": r.get("UNIT_NAME") or r.get("unitName") or ""
+                "unit": r.get("UNIT_NM") or r.get("UNIT_NM_ENG") or r.get("UNIT_NAME") or r.get("unitName") or ""
             })
 
     if rows:
