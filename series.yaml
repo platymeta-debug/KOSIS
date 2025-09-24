@@ -1,0 +1,71 @@
+# NOTE:
+# - logical_name: 최종 wide DataFrame의 컬럼명 (동일 이름으로 era를 묶는다)
+# - orgId/tblId 또는 userStatsId 중 1가지 방식 사용
+# - prdSe: 'M','Q','A'
+# - startPrdDe/endPrdDe: 'YYYYMM' or 'YYYY'
+# - params: objL1~ 등 세부 필터(필요 시)
+# - 같은 logical_name으로 여러 줄을 두면 (예: ~2019, 2020~) 자동 병합
+
+series:
+
+  # ===== 인구 총량 (연결) =====
+  - logical_name: population_total
+    orgId: "101"
+    tblId: "DT_1B040A"     # (예시)  ~2019
+    prdSe: "A"
+    startPrdDe: "1980"
+    endPrdDe: "2019"
+
+  - logical_name: population_total
+    orgId: "101"
+    tblId: "DT_1B040B"     # (예시)  2020~
+    prdSe: "A"
+    startPrdDe: "2020"
+    endPrdDe: "2025"
+
+  # ===== 기준금리 (분기 변환 목적) =====
+  - logical_name: policy_rate
+    orgId: "101"
+    tblId: "DT_RATE_A"     # (예시)
+    prdSe: "M"
+    startPrdDe: "200001"
+
+  # ===== M2 통화량 =====
+  - logical_name: m2
+    orgId: "101"
+    tblId: "DT_M2_TOT_A"   # (예시, 월별)
+    prdSe: "M"
+    startPrdDe: "199501"
+
+  # ===== 주택가격지수 =====
+  - logical_name: house_price
+    orgId: "101"
+    tblId: "DT_HOUSING_PX_A"   # (예시)
+    prdSe: "M"
+    startPrdDe: "200001"
+
+  # ===== 은행 대출(가계/총액 등) =====
+  - logical_name: bank_loan
+    orgId: "101"
+    tblId: "DT_BANK_LOAN_A"    # (예시)
+    prdSe: "M"
+    startPrdDe: "199801"
+
+  # ===== CPI =====
+  - logical_name: cpi
+    orgId: "101"
+    tblId: "DT_CPI_GEN_A"      # (예시)
+    prdSe: "M"
+    startPrdDe: "199001"
+
+  # ===== GDP 성장률 (분기) =====
+  - logical_name: gdp_growth
+    orgId: "101"
+    tblId: "DT_GDP_GROWTH_Q"   # (예시)
+    prdSe: "Q"
+    startPrdDe: "1990Q1"
+
+
+⚠️ 중요: 위 orgId/tblId들은 예시라서, 실제 KOSIS에서 사용하는 값으로 바꿔 넣어줘.
+원리는 “동일 logical_name로 여러 테이블(era)을 나열 → 자동 병합”이야.
+이렇게만 해두면 100~1000개든 계속 append해서 확장 가능.
