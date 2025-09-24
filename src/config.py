@@ -1,12 +1,11 @@
 """Lightweight configuration module for the standalone KOSIS helpers."""
-
+import os
 from __future__ import annotations
 from dotenv import load_dotenv
 load_dotenv()  # 프로젝트 루트 .env 자동 로드
 
 KOSIS_API_KEY = os.getenv("KOSIS_API_KEY", "")
 
-import os
 
 # NOTE: ``KOSIS_API_KEY`` *must* be configured by the caller.  The scripts keep the
 # empty-string default so the configuration module can be imported safely during
