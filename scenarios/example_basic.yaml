@@ -1,0 +1,27 @@
+meta:
+  name: "금리+환율 복합 긴축"
+  horizon: 8
+  units: "model"
+
+shocks:
+  - var: "macro.policy_rate"
+    type: "step"
+    size: 0.50
+    start_h: 0
+  - var: "fx.usdkrw"
+    type: "gradual"
+    size: 0.08
+    start_h: 1
+    duration: 4
+  - var: "energy.oil"
+    type: "pulse"
+    size: 0.10
+    start_h: 0
+    duration: 1
+
+targets:
+  include_prefix:
+    - "macro."
+    - "firm."
+    - "finance."
+    - "asset."
