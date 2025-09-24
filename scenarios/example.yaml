@@ -1,0 +1,5 @@
+name: "인구 -10% & 기준금리 +50bp"
+horizon_quarters: 8
+shocks:
+  population_total: "-10%"
+  policy_rate: 0.5
