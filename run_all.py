@@ -37,13 +37,15 @@ if __name__ == "__main__":
     step1 = [
         PY, "run_build_catalog.py",
         "--vwcd", "MT_ZTITLE",
-        "--roots", "A1", "A2",
+        "--roots", "A",
         "--out", "series_catalog.csv",
         "--max-depth", "6",
         "--auto-fallback",
         "--auto-discover",
         "--discover-max-tries", "500",
-        "--discover-time-budget", "90"
+        "--discover-time-budget", "90",
+        "--leaf-cap", "400",
+        "--verbose",
     ]
     rc = run(step1)
 
