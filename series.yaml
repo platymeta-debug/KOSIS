@@ -1,71 +1,34 @@
-# NOTE:
-# - logical_name: 최종 wide DataFrame의 컬럼명 (동일 이름으로 era를 묶는다)
-# - orgId/tblId 또는 userStatsId 중 1가지 방식 사용
-# - prdSe: 'M','Q','A'
-# - startPrdDe/endPrdDe: 'YYYYMM' or 'YYYY'
-# - params: objL1~ 등 세부 필터(필요 시)
-# - 같은 logical_name으로 여러 줄을 두면 (예: ~2019, 2020~) 자동 병합
-
+# 같은 지표가 시대별로 분리(~2019/2020~)되면, 같은 logical_name으로 행을 복제하고
+# startPrdDe / endPrdDe 만 다르게 적으세요. 자동 병합됩니다.
 series:
 
-  # ===== 인구 총량 (연결) =====
-  - logical_name: population_total
-    orgId: "101"
-    tblId: "DT_1B040A"     # (예시)  ~2019
+  # ===== Macro (예시) =====
+  - logical_name: macro.population_total
+    orgId: ""      # TODO (KOSIS에서 채우기)
+    tblId: ""      # TODO
     prdSe: "A"
     startPrdDe: "1980"
-    endPrdDe: "2019"
-
-  - logical_name: population_total
-    orgId: "101"
-    tblId: "DT_1B040B"     # (예시)  2020~
-    prdSe: "A"
-    startPrdDe: "2020"
-    endPrdDe: "2025"
-
-  # ===== 기준금리 (분기 변환 목적) =====
-  - logical_name: policy_rate
-    orgId: "101"
-    tblId: "DT_RATE_A"     # (예시)
-    prdSe: "M"
-    startPrdDe: "200001"
-
-  # ===== M2 통화량 =====
-  - logical_name: m2
-    orgId: "101"
-    tblId: "DT_M2_TOT_A"   # (예시, 월별)
-    prdSe: "M"
-    startPrdDe: "199501"
-
-  # ===== 주택가격지수 =====
-  - logical_name: house_price
-    orgId: "101"
-    tblId: "DT_HOUSING_PX_A"   # (예시)
-    prdSe: "M"
-    startPrdDe: "200001"
-
-  # ===== 은행 대출(가계/총액 등) =====
-  - logical_name: bank_loan
-    orgId: "101"
-    tblId: "DT_BANK_LOAN_A"    # (예시)
-    prdSe: "M"
-    startPrdDe: "199801"
-
-  # ===== CPI =====
-  - logical_name: cpi
-    orgId: "101"
-    tblId: "DT_CPI_GEN_A"      # (예시)
+  - logical_name: macro.cpi
+    orgId: ""
+    tblId: ""
     prdSe: "M"
     startPrdDe: "199001"
+  - logical_name: macro.policy_rate
+    orgId: ""
+    tblId: ""
+    prdSe: "M"
+    startPrdDe: "200001"
 
-  # ===== GDP 성장률 (분기) =====
-  - logical_name: gdp_growth
-    orgId: "101"
-    tblId: "DT_GDP_GROWTH_Q"   # (예시)
+  # ===== 기업 생태계 (규모×업종×지표; 예시 몇 개만, 원하는 만큼 계속 추가) =====
+  - logical_name: firm.sme.manufacturing.sales
+    orgId: ""
+    tblId: ""
     prdSe: "Q"
-    startPrdDe: "1990Q1"
+
+  - logical_name: firm.large.semiconductor.num_employees
+    orgId: ""
+    tblId: ""
+    prdSe: "Q"
 
 
-⚠️ 중요: 위 orgId/tblId들은 예시라서, 실제 KOSIS에서 사용하는 값으로 바꿔 넣어줘.
-원리는 “동일 logical_name로 여러 테이블(era)을 나열 → 자동 병합”이야.
-이렇게만 해두면 100~1000개든 계속 append해서 확장 가능.
+팁: 전수에 가깝게 긁고 싶다면, 카탈로그 작성 스크립트로 300+ 엔트리 자동 생성해두고, 찾는 대로 orgId/tblId만 채워가세요(요청하면 코드 더 드림).
