@@ -8,10 +8,39 @@ from sklearn.linear_model import LassoCV
 from sklearn.preprocessing import StandardScaler
 from statsmodels.tsa.api import DynamicFactor, VAR
 from statsmodels.tsa.vector_ar.svar_model import SVAR
+from statsmodels.tsa.stattools import adfuller
+
+
+def make_stationary(df: pd.DataFrame) -> pd.DataFrame:
+    """Apply unit-root testing and difference/log-difference as needed."""
+
+    out: dict[str, pd.Series] = {}
+    for col in df.columns:
+        s = df[col].dropna()
+        if s.empty:
+            continue
+        series = s
+        try:
+            pval = adfuller(series, autolag="AIC")[1]
+        except Exception:
+            pval = 1.0
+        if pval > 0.05:
+            if (series > 0).all():
+                series = np.log(series).diff()
+            else:
+                series = series.diff()
+        out[col] = series
+    if not out:
+        return pd.DataFrame(columns=df.columns)
+    Z = pd.DataFrame(out)
+    return Z.dropna(how="any")
 
 
 def fit_var(df: pd.DataFrame, lags: int = 2):
-    return VAR(df.dropna()).fit(lags)
+    Z = make_stationary(df)
+    if Z.empty:
+        raise ValueError("Insufficient data after stationarity adjustments")
+    return VAR(Z).fit(lags)
 
 
 def fit_svar(
@@ -21,7 +50,10 @@ def fit_svar(
     B: Optional[np.ndarray] = None,
 ):
     """Fit a simple SVAR model with optional identification matrices."""
-    base = VAR(df.dropna()).fit(lags)
+    Z = make_stationary(df)
+    if Z.empty:
+        raise ValueError("Insufficient data after stationarity adjustments")
+    base = VAR(Z).fit(lags)
     k = base.neqs
     if A is None:
         A = np.eye(k)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 import yaml, pandas as pd
 from pathlib import Path
-from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from .db import init_db, overwrite_catalog, connect, latest_periods
 from .kosis_client import fetch_full, fetch_since
 
@@ -53,11 +53,37 @@ def harvest(series_yaml: str, mode: str="update"):
     # 원본 저장
     if results:
         now = pd.Timestamp.utcnow()
-        out = [{"catalog_id":rid, "fetched_at":now, "payload":pd.Series([data]).to_json(orient="values")}
-               for rid, data in results]
+        out = [
+            {
+                "catalog_id": rid,
+                "fetched_at": now,
+                "payload": pd.Series([data]).to_json(orient="values"),
+            }
+            for rid, data in results
+        ]
         df = pd.DataFrame(out)
         con.register("df_raw", df)
         con.execute("INSERT INTO raw_kosis SELECT * FROM df_raw")
+
+        flat_rows = []
+        for rid, data in results:
+            if isinstance(data, list):
+                for entry in data:
+                    if isinstance(entry, dict):
+                        rec = entry.copy()
+                        rec["catalog_id"] = rid
+                        rec["fetched_at"] = now
+                        flat_rows.append(rec)
+        if flat_rows:
+            flat_df = pd.DataFrame(flat_rows)
+            out_dir = Path("out/raw_snapshots")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            raw_path = out_dir / f"kosis_raw_{now.strftime('%Y%m%d%H%M%S')}.parquet"
+            try:
+                flat_df.to_parquet(raw_path, index=False)
+            except Exception:
+                raw_path = out_dir / f"kosis_raw_{now.strftime('%Y%m%d%H%M%S')}.csv"
+                flat_df.to_csv(raw_path, index=False)
 
     if errors:
         Path("harvest_errors.log").write_text(
