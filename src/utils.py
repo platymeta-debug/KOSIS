@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+
+import json
 import time
 from typing import Any
 
@@ -14,6 +16,7 @@ def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
     """Perform a GET request with retry/backoff logic and KOSIS specific guards."""
 
     last_err: Exception | None = None
+    headers = {"Accept": "application/json"}
     for attempt in range(1, MAX_RETRIES + 1):
         started = time.time()
         try:
@@ -23,12 +26,24 @@ def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
                 print(
                     f"[HTTP] GET {url} try={attempt} timeout={TIMEOUT} params={debug_params}"
                 )
-            response = requests.get(url, params=params, timeout=TIMEOUT)
+
+            response = requests.get(
+                url, params=params, timeout=TIMEOUT, headers=headers
+            )
             if verbose:
                 elapsed = time.time() - started
-                print(f"[HTTP] status={response.status_code} elapsed={elapsed:.2f}s")
+                ctype = response.headers.get("Content-Type")
+                print(
+                    f"[HTTP] status={response.status_code} ctype={ctype} elapsed={elapsed:.2f}s"
+                )
             response.raise_for_status()
-            payload = response.json()
+
+            text = response.text.strip()
+            if text[:1] in "[{":
+                payload = json.loads(text)
+            else:
+                raise RuntimeError(f"non-json body: {text[:120]}...")
+
 
             if isinstance(payload, dict) and payload.get("err"):
                 raise RuntimeError(payload)

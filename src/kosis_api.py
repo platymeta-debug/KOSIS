@@ -26,6 +26,7 @@ def list_stats(
     params = {
         "method": "getList",
         "format": "json",
+        "content": "json",
         "apiKey": KOSIS_API_KEY,
         "vwCd": vw_cd,
         "parentId": parent_id,
