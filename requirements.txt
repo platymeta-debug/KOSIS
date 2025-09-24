@@ -1,12 +1,13 @@
 # Core
 requests==2.32.3
 pandas==2.3.1
-numpy==2.3.2
+numpy==2.2.2
 PyYAML==6.0.2
 tqdm==4.66.4
-duckdb==1.1.0
+duckdb==1.4.0
 
-# Modeling / Stats (Py 3.13 호환)
-scipy==1.14.1
-statsmodels==0.14.2
+# Modeling / Stats
+scipy==1.14.1          # (numpy < 2.3 요구 → numpy 2.2.2와 호환)
+statsmodels==0.14.5    # (Py 3.13 지원)
 scikit-learn==1.5.2
+python-dotenv==1.0.1
