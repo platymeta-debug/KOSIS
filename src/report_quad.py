@@ -46,6 +46,7 @@ def split_by_domain(pairs: pd.DataFrame) -> dict:
     return {k: v for k, v in pairs.groupby("domain")}
 
 
+
 def cross_domain_only(pairs: pd.DataFrame) -> pd.DataFrame:
     out: list[pd.Series] = []
     for _, r in pairs.iterrows():
@@ -98,6 +99,7 @@ def render_quad_report(
                     f.write(f"| {r['asset']} | {r['score']:.3f} | {r['stance']} |\n")
             f.write("\n")
 
+
         cd = cross_domain_only(pairs)
         if len(cd):
             f.write("## Cross-domain Insights (카테고리 무관 신규 패턴)\n")
@@ -107,4 +109,5 @@ def render_quad_report(
                     f"- {r['a']} ↔ {r['b']}: 상관 {r['corr']:.2f}, 지속률 {r['consistency']:.2f}{sig}\n"
                 )
             f.write("\n")
+
 

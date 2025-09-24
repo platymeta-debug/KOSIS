@@ -21,6 +21,7 @@ def _mi_xy(x: np.ndarray, y: np.ndarray) -> float:
     return float(mi[0])
 
 
+
 def _rolling_corr_consistency(df: pd.DataFrame, window: int = 20, thr: float = 0.3) -> pd.DataFrame:
     """창 내 상관계수의 절대값이 thr 이상인 비율을 계산한다."""
 
@@ -113,6 +114,7 @@ def discover_signals(
             g_ba = bool(gr_sig.loc[b, a]) if (b in gr_sig.index and a in gr_sig.columns) else False
             lag_ab = lead_of(Z[a], Z[b])
             k = float(np.nan_to_num(pc, nan=0.0))
+
             mi = _mi_xy(Z[a].values, Z[b].values)
             s = (
                 abs(c)
@@ -121,6 +123,7 @@ def discover_signals(
                 + 0.3 * float(cons.loc[a, b])
                 + 0.3 * mi
             )
+
             tier = (
                 "strong"
                 if abs(c) >= corr_thr_strong
