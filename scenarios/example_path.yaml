@@ -1,0 +1,18 @@
+meta:
+  name: "정책금리 경로 제시 (경로 고정)"
+  horizon: 8
+
+shocks:
+  - var: "macro.policy_rate"
+    type: "path"
+    path: [0.25, 0.25, 0.00, -0.25, -0.25, 0.00, 0.00, 0.00]
+    start_h: 0
+
+targets:
+  include_prefix:
+    - "macro."
+    - "firm."
+    - "finance."
+    - "asset."
+    - "real_estate."
+    - "debt."
