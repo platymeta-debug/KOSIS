@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 import json
 import time
 from typing import Any
@@ -25,6 +26,7 @@ def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
                 print(
                     f"[HTTP] GET {url} try={attempt} timeout={TIMEOUT} params={debug_params}"
                 )
+
             response = requests.get(
                 url, params=params, timeout=TIMEOUT, headers=headers
             )
@@ -41,6 +43,7 @@ def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
                 payload = json.loads(text)
             else:
                 raise RuntimeError(f"non-json body: {text[:120]}...")
+
 
             if isinstance(payload, dict) and payload.get("err"):
                 raise RuntimeError(payload)
