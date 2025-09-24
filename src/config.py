@@ -1,6 +1,10 @@
 """Lightweight configuration module for the standalone KOSIS helpers."""
 
 from __future__ import annotations
+from dotenv import load_dotenv
+load_dotenv()  # 프로젝트 루트 .env 자동 로드
+
+KOSIS_API_KEY = os.getenv("KOSIS_API_KEY", "")
 
 import os
 
