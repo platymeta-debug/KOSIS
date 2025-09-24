@@ -3,8 +3,23 @@ from __future__ import annotations
 import itertools
 import numpy as np
 import pandas as pd
+from sklearn.feature_selection import mutual_info_regression
+from sklearn.preprocessing import StandardScaler
 from statsmodels.stats.multitest import multipletests
 from statsmodels.tsa.stattools import grangercausalitytests
+
+
+def _mi_xy(x: np.ndarray, y: np.ndarray) -> float:
+    x = x.reshape(-1, 1)
+    y = y.ravel()
+    mask = np.isfinite(x).ravel() & np.isfinite(y)
+    if mask.sum() < 20:
+        return 0.0
+    sc = StandardScaler()
+    xs = sc.fit_transform(x[mask])
+    mi = mutual_info_regression(xs, y[mask], discrete_features=False, random_state=0)
+    return float(mi[0])
+
 
 
 def _rolling_corr_consistency(df: pd.DataFrame, window: int = 20, thr: float = 0.3) -> pd.DataFrame:
@@ -99,7 +114,16 @@ def discover_signals(
             g_ba = bool(gr_sig.loc[b, a]) if (b in gr_sig.index and a in gr_sig.columns) else False
             lag_ab = lead_of(Z[a], Z[b])
             k = float(np.nan_to_num(pc, nan=0.0))
-            s = abs(c) + 0.5 * abs(k) + 0.2 * (g_ab + g_ba) + 0.3 * float(cons.loc[a, b])
+
+            mi = _mi_xy(Z[a].values, Z[b].values)
+            s = (
+                abs(c)
+                + 0.5 * abs(k)
+                + 0.2 * (g_ab + g_ba)
+                + 0.3 * float(cons.loc[a, b])
+                + 0.3 * mi
+            )
+
             tier = (
                 "strong"
                 if abs(c) >= corr_thr_strong
@@ -117,6 +141,7 @@ def discover_signals(
                     "gr_ba": g_ba,
                     "lead_ab": int(lag_ab),
                     "consistency": float(cons.loc[a, b]),
+                    "mi": float(mi),
                     "score": float(s),
                     "tier": tier,
                 }

@@ -46,6 +46,16 @@ def split_by_domain(pairs: pd.DataFrame) -> dict:
     return {k: v for k, v in pairs.groupby("domain")}
 
 
+
+def cross_domain_only(pairs: pd.DataFrame) -> pd.DataFrame:
+    out: list[pd.Series] = []
+    for _, r in pairs.iterrows():
+        da, db = _domain(r["a"]), _domain(r["b"])
+        if da != db:
+            out.append(r)
+    return pd.DataFrame(out)
+
+
 def bullets_for(df: pd.DataFrame, top_strong: int = 8, top_medium: int = 5) -> list[str]:
     strong = df[df["tier"] == "strong"].head(top_strong)
     medium = df[df["tier"] == "medium"].head(top_medium)
@@ -88,4 +98,16 @@ def render_quad_report(
                 for _, r in invest_table.iterrows():
                     f.write(f"| {r['asset']} | {r['score']:.3f} | {r['stance']} |\n")
             f.write("\n")
+
+
+        cd = cross_domain_only(pairs)
+        if len(cd):
+            f.write("## Cross-domain Insights (카테고리 무관 신규 패턴)\n")
+            for _, r in cd.head(15).iterrows():
+                sig = " (Granger)" if (r["gr_ab"] or r["gr_ba"]) else ""
+                f.write(
+                    f"- {r['a']} ↔ {r['b']}: 상관 {r['corr']:.2f}, 지속률 {r['consistency']:.2f}{sig}\n"
+                )
+            f.write("\n")
+
 
