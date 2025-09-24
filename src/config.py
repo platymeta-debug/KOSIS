@@ -18,3 +18,6 @@ URL_LIST = "https://kosis.kr/openapi/statisticsList.do"
 URL_DATA = "https://kosis.kr/openapi/statisticsData.do"
 URL_PARAM = "https://kosis.kr/openapi/Param/statisticsParameterData.do"
 URL_META = "https://kosis.kr/openapi/statisticsData.do"
+
+# Local DuckDB path used for staging normalised observations across the pipeline.
+DB_PATH = os.getenv("KOSIS_DB_PATH", "kosis.duckdb")
