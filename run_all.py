@@ -3,10 +3,17 @@ import subprocess, sys, os, shutil
 from pathlib import Path
 from textwrap import dedent
 
-PY = "python"  # venv에서 실행하면 .venv/Scripts/python.exe 가 이 파일을 실행 중일 것
+PY = sys.executable  # 현재 실행 중인 해석기(.venv)를 하위 호출에도 강제
 
 def run(cmd):
-    print("\n▶", " ".join(cmd))
+    # 문자열로 올 수도 있으니 보정(선택)
+    if isinstance(cmd, str) and cmd.startswith("python "):
+        cmd = cmd.replace("python ", f'"{PY}" ', 1)
+    elif isinstance(cmd, (list, tuple)) and cmd and str(cmd[0]).lower() == "python":
+        cmd = [PY] + list(cmd[1:])
+
+    printable = " ".join(str(c) for c in cmd) if isinstance(cmd, (list, tuple)) else str(cmd)
+    print("\n▶", printable)
     r = subprocess.run(cmd)
     return r.returncode
 
@@ -36,15 +43,12 @@ if __name__ == "__main__":
     # ① Catalog build (with auto-fallback + auto-discover)
     step1 = [
         PY, "run_build_catalog.py",
+        "--mode", "direct",
         "--vwcd", "MT_ZTITLE",
-        "--roots", "A",
+        "--roots", "AUTO",
         "--out", "series_catalog.csv",
-        "--max-depth", "6",
-        "--auto-fallback",
-        "--auto-discover",
-        "--discover-max-tries", "500",
-        "--discover-time-budget", "90",
-        "--leaf-cap", "400",
+        "--max-depth", "4",
+        "--leaf-cap", "5000",
         "--verbose",
     ]
     rc = run(step1)

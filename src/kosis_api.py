@@ -7,6 +7,8 @@ from typing import Any, Dict, List, Optional
 from .config import KOSIS_API_KEY, URL_DATA, URL_LIST, URL_META, URL_PARAM
 from .utils import get_json
 
+COMMON_PARAMS = {"format": "json", "jsonVD": "Y", "content": "json"}
+
 
 def list_stats(
     vw_cd: str,
@@ -24,18 +26,20 @@ def list_stats(
     """
 
     params = {
+        **COMMON_PARAMS,
         "method": "getList",
-        "format": "json",
-        "content": "json",
         "apiKey": KOSIS_API_KEY,
         "vwCd": vw_cd,
         "parentId": parent_id,
-        "pIndex": str(pindex),
-        "pSize": str(psize),
-        "jsonVD": "Y",
+        "pIndex": str(pindex or 1),
+        "pSize": str(psize or 1000),
+    }
+    headers = {
+        "Accept": "application/json,text/plain,*/*",
+        "User-Agent": "kosis-catalog/1.0",
     }
 
-    rows = get_json(URL_LIST, params, verbose=verbose)
+    rows = get_json(URL_LIST, params, headers=headers, verbose=verbose)
     if isinstance(rows, dict) and "list" in rows:
         rows = rows["list"]
     return rows if isinstance(rows, list) else []
@@ -53,9 +57,9 @@ def data_by_userstats(
     """Retrieve statistics data for the userStatsId style endpoint."""
 
     params: Dict[str, Any] = {
+        **COMMON_PARAMS,
         "method": "getList",
         "apiKey": KOSIS_API_KEY,
-        "format": "json",
         "userStatsId": user_stats_id,
         "prdSe": prd_se,
     }
@@ -87,9 +91,9 @@ def data_by_params(
     """Retrieve statistics data for the parameterised table endpoint."""
 
     params: Dict[str, Any] = {
+        **COMMON_PARAMS,
         "method": "getList",
         "apiKey": KOSIS_API_KEY,
-        "format": "json",
         "orgId": org_id,
         "tblId": tbl_id,
         "prdSe": prd_se,
@@ -119,11 +123,30 @@ def get_meta_table(org_id: str, tbl_id: str) -> Dict[str, Any]:
     """Fetch table metadata for the supplied organisation/table identifiers."""
 
     params = {
+        **COMMON_PARAMS,
         "method": "getMeta",
         "apiKey": KOSIS_API_KEY,
-        "format": "json",
         "type": "TBL",
         "orgId": org_id,
         "tblId": tbl_id,
     }
     return get_json(URL_META, params)
+
+
+def fetch_userstats(userStatsId: str, verbose: bool = False):
+    """Fetch rows directly via the userStatsId (등록URL) endpoint."""
+
+    params = {
+        **COMMON_PARAMS,
+        "method": "getList",
+        "userStatsId": userStatsId,
+        "apiKey": KOSIS_API_KEY,
+    }
+    payload = get_json(URL_DATA, params, verbose=verbose)
+    if isinstance(payload, dict):
+        if "list" in payload:
+            return payload["list"]
+        # 일부 응답은 STAT_DATA 키를 사용
+        if "STAT_DATA" in payload and isinstance(payload["STAT_DATA"], list):
+            return payload["STAT_DATA"]
+    return payload

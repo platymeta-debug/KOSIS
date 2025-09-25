@@ -12,23 +12,40 @@ import requests
 from .config import MAX_RETRIES, RATE_SLEEP, TIMEOUT
 
 
-def get_json(url: str, params: dict[str, Any], *, verbose: bool = False) -> Any:
+def get_json(
+    url: str,
+    params: dict[str, Any],
+    *,
+    headers: dict[str, str] | None = None,
+    verbose: bool = False,
+) -> Any:
     """Perform a GET request with retry/backoff logic and KOSIS specific guards."""
 
     last_err: Exception | None = None
-    headers = {"Accept": "application/json"}
+    request_headers = {"Accept": "application/json"}
+    if headers:
+        request_headers.update(headers)
     for attempt in range(1, MAX_RETRIES + 1):
         started = time.time()
         try:
             if verbose:
-                debug_keys = ("method", "vwCd", "parentId", "pIndex", "pSize")
+                debug_keys = (
+                    "method",
+                    "vwCd",
+                    "parentId",
+                    "pIndex",
+                    "pSize",
+                    "userStatsId",
+                    "orgId",
+                    "tblId",
+                )
                 debug_params = {k: params.get(k) for k in debug_keys}
                 print(
                     f"[HTTP] GET {url} try={attempt} timeout={TIMEOUT} params={debug_params}"
                 )
 
             response = requests.get(
-                url, params=params, timeout=TIMEOUT, headers=headers
+                url, params=params, timeout=TIMEOUT, headers=request_headers
             )
             if verbose:
                 elapsed = time.time() - started
