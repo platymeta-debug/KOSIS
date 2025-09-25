@@ -1,3 +1,7 @@
+# =======================
+# requirements.txt (UTF-8)
+# =======================
+
 # Core
 requests==2.32.3
 pandas==2.3.1
@@ -7,7 +11,12 @@ tqdm==4.66.4
 duckdb==1.4.0
 
 # Modeling / Stats
-scipy==1.14.1          # (numpy < 2.3 요구 → numpy 2.2.2와 호환)
-statsmodels==0.14.5    # (Py 3.13 지원)
+scipy==1.14.1          # (numpy < 2.3 요구 → 2.2.2와 호환)
+statsmodels==0.14.5    # (Py 3.12/3.13 호환)
 scikit-learn==1.5.2
+
+# Utilities
 python-dotenv==1.0.1
+
+# (옵션) 엑셀 I/O가 필요하면 주석 해제
+openpyxl==3.1.5

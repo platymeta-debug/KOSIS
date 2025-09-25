@@ -28,6 +28,7 @@ def list_stats(
     params = {
         **COMMON_PARAMS,
         "method": "getList",
+
         "apiKey": KOSIS_API_KEY,
         "vwCd": vw_cd,
         "parentId": parent_id,
