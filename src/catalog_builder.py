@@ -6,7 +6,7 @@ from typing import Dict, List
 
 import pandas as pd
 
-from .kosis_api import list_stats
+from .kosis_api import list_nodes
 
 
 def _is_leaf(node: Dict) -> bool:
@@ -56,7 +56,7 @@ def _collect_from_root(
         acc = []
     if depth > max_depth or (leaf_cap and len(acc) >= leaf_cap):
         return acc
-    rows = list_stats(vw_cd, root_id, verbose=verbose) or []
+    rows = list_nodes(vwCd=vw_cd, parentId=root_id, verbose=verbose) or []
     if verbose:
         print(f"[tree] depth={depth} root={root_id} rows={len(rows)} acc={len(acc)}")
     for row in rows:
@@ -89,6 +89,8 @@ def _collect_from_root(
 def build_catalog(
     vw_cd: str,
     roots: List[str],
+    *,
+    out: str | None = None,
     max_depth: int = 6,
     verbose: bool = False,
     leaf_cap: int = 5000,
@@ -101,6 +103,8 @@ def build_catalog(
         if leaf_cap and len(acc) >= leaf_cap:
             break
     df = pd.DataFrame(acc).dropna(subset=["tblId"]).drop_duplicates()
+    if out:
+        df.to_csv(out, index=False, encoding="utf-8")
     if verbose:
         print(f"[tree] collected leaves={len(df)}")
     return df

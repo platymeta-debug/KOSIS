@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any, Iterable, List
 
-from .kosis_api import list_stats
+from .kosis_api import list_nodes
 
 
 def harvest_children(vw_cd: str, parent_id: str) -> List[dict[str, Any]]:
     """Return child statistics list entries for the given parent identifier."""
 
-    payload = list_stats(vw_cd=vw_cd, parent_id=parent_id)
+    payload = list_nodes(vwCd=vw_cd, parentId=parent_id)
     return [entry for entry in payload if isinstance(entry, dict)]
 
 

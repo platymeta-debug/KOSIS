@@ -1,80 +1,86 @@
-# run_all.py — one-click pipeline with graceful fallback
-import subprocess, sys, os, shutil
+from __future__ import annotations
+import sys, os, subprocess
 from pathlib import Path
-from textwrap import dedent
 
-PY = sys.executable  # 현재 실행 중인 해석기(.venv)를 하위 호출에도 강제
+PY = sys.executable
+
+
+def echo(msg: str) -> None:
+    print(msg, flush=True)
+
 
 def run(cmd):
-    # 문자열로 올 수도 있으니 보정(선택)
-    if isinstance(cmd, str) and cmd.startswith("python "):
-        cmd = cmd.replace("python ", f'"{PY}" ', 1)
-    elif isinstance(cmd, (list, tuple)) and cmd and str(cmd[0]).lower() == "python":
+    if isinstance(cmd, (list, tuple)) and cmd and str(cmd[0]).lower() == "python":
         cmd = [PY] + list(cmd[1:])
+    elif isinstance(cmd, str) and cmd.startswith("python "):
+        cmd = cmd.replace("python ", f'"{PY}" ', 1)
+    echo("\n▶ " + (" ".join(cmd) if isinstance(cmd, (list, tuple)) else cmd))
+    return subprocess.run(cmd, check=False).returncode
 
-    printable = " ".join(str(c) for c in cmd) if isinstance(cmd, (list, tuple)) else str(cmd)
-    print("\n▶", printable)
-    r = subprocess.run(cmd)
-    return r.returncode
 
-def ensure_env():
-    # .env의 KOSIS_API_KEY 체크(이미 python-dotenv 로드하도록 패치했지만, 친절 메시지)
-    if not os.getenv("KOSIS_API_KEY"):
-        # .env 직접 읽어 키가 있는지 힌트 제공
-        env_path = Path(".env")
-        if env_path.exists():
-            print("[env] .env detected. If key not loaded, src/config.py uses dotenv to load it.")
-        else:
-            print("[env] .env not found. Create .env with KOSIS_API_KEY=...  (or export env var)")
-    return True
+def step_userstats():
+    path = os.environ.get("KOSIS_USERSTATS_FILE", "my_userstats.txt")
+    if not Path(path).exists():
+        echo(f"[skip] userstats file not found: {path}")
+        return 0
+    out = os.environ.get("KOSIS_DATA_OUT", "data_rows.csv")
+    verbose = os.environ.get("KOSIS_VERBOSE", "1") not in (
+        "0",
+        "false",
+        "False",
+        "off",
+        "OFF",
+    )
+    cmd = [
+        PY,
+        "run_build_catalog.py",
+        "--mode",
+        "userstats",
+        "--userstats",
+        path,
+        "--out",
+        out,
+    ]
+    if verbose:
+        cmd.append("--verbose")
+    return run(cmd)
 
-def write_catalog_template(path="series_catalog.csv"):
-    tpl = dedent("""\
-    logical_name,mode,prdSe,startPrdDe,endPrdDe,userStatsId,orgId,tblId,itmId,objL1,objL2,objL3,objL4,objL5,objL6,objL7,objL8,newEstPrdCnt,prdInterval,outputFields
-    macro.cpi,param,M,200001,,,<ORGID>,<TBLID>,<ITMID>,<OBJL1>,,,,,,,,,,"PRD_DE,DT,UNIT_NM"
-    asset.kospi,user,M,200001,,<USER_STATS_ID>,,,,,,,,,,,,,,"PRD_DE,DT,UNIT_NM"
-    """)
-    Path(path).write_text(tpl, encoding="utf-8")
-    print(f"[template] wrote {path}. Fill in real codes and re-run.")
 
-if __name__ == "__main__":
-    ensure_env()
-
-    # ① Catalog build (with auto-fallback + auto-discover)
-    step1 = [
-        PY, "run_build_catalog.py",
-        "--mode", "direct",
-        "--vwcd", "MT_ZTITLE",
-        "--roots", "AUTO",
-        "--out", "series_catalog.csv",
-        "--max-depth", "4",
-        "--leaf-cap", "5000",
+def step_direct():
+    out = os.environ.get("KOSIS_OUT", "series_catalog.csv")
+    vw = os.environ.get("KOSIS_VWCD", "MT_ZTITLE")
+    roots = os.environ.get("KOSIS_ROOTS", "AUTO")
+    depth = os.environ.get("KOSIS_MAX_DEPTH", "5")
+    cmd = [
+        PY,
+        "run_build_catalog.py",
+        "--mode",
+        "direct",
+        "--vwcd",
+        vw,
+        "--roots",
+        roots,
+        "--max-depth",
+        str(depth),
+        "--out",
+        out,
         "--verbose",
     ]
-    rc = run(step1)
+    return run(cmd)
 
-    if rc == 2:
-        # 자동발견 실패 → 템플릿 생성 후 깔끔 종료
-        write_catalog_template("series_catalog.csv")
-        print("\n❗ 자동으로 parentListId를 찾지 못했습니다.")
-        print("   1) series_catalog.csv 에 실제 KOSIS 코드(orgId/tblId/objL1/itmId 또는 userStatsId)를 채운 뒤")
-        print("   2) 다시 run_all.py 를 실행하세요.")
-        sys.exit(0)
-    elif rc != 0:
-        sys.exit(rc)
 
-    # ②~⑦ 계속
-    steps = [
-        [PY, "run_fetch_data.py", "--catalog", "series_catalog.csv", "--out", "out_data.parquet"],
-        [PY, "run_step2_prepare.py", "--raw", "out_data.parquet", "--wide-out", "out_wide.parquet"],
-        [PY, "run_step3_discover.py", "--wide", "out_wide.parquet", "--out", "out_signals.csv", "--corr-strong", "0.45", "--corr-medium", "0.30"],
-        [PY, "run_step4_causal.py", "--wide", "out_wide.parquet", "--outdir", "out_causal", "--prefer", "macro.policy_rate", "macro.cpi", "macro.gdp_growth", "--lp_shock", "macro.policy_rate", "--asset_prefix", "asset."],
-        [PY, "run_step5_scenario.py", "--scenario", "scenarios/example_basic.yaml", "--irf", "out_causal/irf_svar.csv", "--fallback-irf", "out_causal/irf_var.csv", "--lp", "out_causal/lp_betas.csv", "--outdir", "out_scenario", "--summary-h", "4"],
-        [PY, "run_step6_report.py", "--signals", "out_signals.csv", "--irf-svar", "out_causal/irf_svar.csv", "--irf-var", "out_causal/irf_var.csv", "--lp", "out_causal/lp_betas.csv", "--scenario-dir", "out_scenario", "--outdir", "out_report", "--h-pick", "4"]
-    ]
-    for s in steps:
-        rc = run(s)
-        if rc != 0:
-            sys.exit(rc)
+def main():
+    echo("[env] .env detected. If key not loaded, src/config.py uses dotenv to load it.")
+    rc = step_userstats()
+    if rc != 0:
+        return rc
+    rc = step_direct()
+    if rc != 0:
+        return rc
+    echo("\n[run_all] done.")
+    return 0
 
-    print("\n✅ All steps finished. See: out_report/report.md (and .html)")
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
