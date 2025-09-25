@@ -140,6 +140,7 @@ def main():
         default=4,
         help="direct 모드 카테고리 깊이 제한(기본 4면 충분)",
     )
+
     ap.add_argument("--auto-fallback", action="store_true", help="실패/빈 결과 시 내장 후보로 재시도")
     ap.add_argument("--auto-discover", action="store_true", help="내장 스캐너로 parentListId 자동 탐색")
     ap.add_argument("--discover-max-tries", type=int, default=500)
@@ -170,6 +171,7 @@ def main():
             verbose=args.verbose,
         )
         sys.exit(0)
+
 
     if args.roots and len(args.roots) == 1 and args.roots[0].upper() in ("AUTO", "TOP"):
         top = autoload_top_roots(args.vwcd, parent="A", verbose=args.verbose)
