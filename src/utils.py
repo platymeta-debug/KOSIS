@@ -29,7 +29,16 @@ def get_json(
         started = time.time()
         try:
             if verbose:
-                debug_keys = ("method", "vwCd", "parentId", "pIndex", "pSize")
+                debug_keys = (
+                    "method",
+                    "vwCd",
+                    "parentId",
+                    "pIndex",
+                    "pSize",
+                    "userStatsId",
+                    "orgId",
+                    "tblId",
+                )
                 debug_params = {k: params.get(k) for k in debug_keys}
                 print(
                     f"[HTTP] GET {url} try={attempt} timeout={TIMEOUT} params={debug_params}"

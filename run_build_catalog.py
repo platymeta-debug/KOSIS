@@ -172,7 +172,6 @@ def main():
         )
         sys.exit(0)
 
-
     if args.roots and len(args.roots) == 1 and args.roots[0].upper() in ("AUTO", "TOP"):
         top = autoload_top_roots(args.vwcd, parent="A", verbose=args.verbose)
         if args.verbose:
